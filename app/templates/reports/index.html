@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Отчёты{% endblock %}
+{% block content %}
+<div class="form-page">
+  <h2>📄 Отчёты</h2>
+
+  <div class="reports-grid">
+    <!-- CSV экспорт -->
+    <div class="form-card">
+      <h3>📊 Экспорт в CSV</h3>
+      <p>Выгрузка операций за выбранный период в формате CSV.</p>
+      <form method="GET" action="{{ url_for('reports.export_csv') }}">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Дата от</label>
+            <input type="date" name="date_from" value="{{ today.replace(day=1).strftime('%Y-%m-%d') }}" required>
+          </div>
+          <div class="form-group">
+            <label>Дата до</label>
+            <input type="date" name="date_to" value="{{ today.strftime('%Y-%m-%d') }}" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Тип операций</label>
+          <select name="type">
+            <option value="">Все</option>
+            <option value="income">Только доходы</option>
+            <option value="expense">Только расходы</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary">⬇️ Скачать CSV</button>
+      </form>
+    </div>
+
+    <!-- PDF отчёт -->
+    <div class="form-card">
+      <h3>📑 Генерация PDF</h3>
+      <p>PDF-отчёт с таблицей операций и итогами за период.</p>
+      <form method="POST" action="{{ url_for('reports.generate_pdf') }}">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Дата от</label>
+            <input type="date" name="date_from" value="{{ today.replace(day=1).strftime('%Y-%m-%d') }}" required>
+          </div>
+          <div class="form-group">
+            <label>Дата до</label>
+            <input type="date" name="date_to" value="{{ today.strftime('%Y-%m-%d') }}" required>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">⬇️ Скачать PDF</button>
+      </form>
+    </div>
+
+    <!-- Отправка на email -->
+    <div class="form-card">
+      <h3>📧 Отправить на Email</h3>
+      <p>Сгенерирует PDF за выбранный период и отправит его на указанный адрес.</p>
+      <form method="POST" action="{{ url_for('reports.send_email') }}">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Дата от</label>
+            <input type="date" name="date_from" value="{{ today.replace(day=1).strftime('%Y-%m-%d') }}" required>
+          </div>
+          <div class="form-group">
+            <label>Дата до</label>
+            <input type="date" name="date_to" value="{{ today.strftime('%Y-%m-%d') }}" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Email получателя</label>
+          <input type="email" name="email" value="{{ current_user.email }}" required>
+        </div>
+        <button type="submit" class="btn btn-primary">📤 Отправить отчёт</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

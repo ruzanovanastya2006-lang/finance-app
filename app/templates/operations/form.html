@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}{% if tx %}Редактировать операцию{% else %}Добавить операцию{% endif %}{% endblock %}
+{% block content %}
+<div class="form-page">
+  <div class="form-card">
+    <h2>{% if tx %}✏️ Редактировать операцию{% else %}➕ Добавить операцию{% endif %}</h2>
+    <form method="POST">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Тип *</label>
+          <div class="type-toggle">
+            <label class="type-opt">
+              <input type="radio" name="type" value="expense"
+                {% if not tx or tx.type == 'expense' %}checked{% endif %}>
+              <span class="type-label expense-label">↓ Расход</span>
+            </label>
+            <label class="type-opt">
+              <input type="radio" name="type" value="income"
+                {% if tx and tx.type == 'income' %}checked{% endif %}>
+              <span class="type-label income-label">↑ Доход</span>
+            </label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Сумма, ₽ *</label>
+          <input type="number" name="amount" step="0.01" min="0.01" required
+                 value="{{ '%.2f'|format(tx.amount|float) if tx else '' }}"
+                 placeholder="0.00" autofocus>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Категория *</label>
+          <select name="category_id" required id="categorySelect">
+            <option value="">— Выберите категорию —</option>
+            {% for c in cats %}
+              <option value="{{ c.id }}"
+                {% if tx and tx.category_id == c.id %}selected{% endif %}>
+                {{ c.icon }} {{ c.name }}
+              </option>
+            {% endfor %}
+          </select>
+          <a href="{{ url_for('categories.index') }}" class="btn-link-sm">+ Новая категория</a>
+        </div>
+        <div class="form-group">
+          <label>Дата *</label>
+          <input type="date" name="date" required
+                 value="{{ tx.date.strftime('%Y-%m-%d') if tx else today }}"
+                 max="{{ today }}">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Комментарий</label>
+        <textarea name="comment" rows="2" placeholder="Необязательно">{{ tx.comment or '' }}</textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Фото чека</label>
+        <div class="upload-stub">
+          📎 Загрузка в Google Drive — в разработке
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+          {% if tx %}Сохранить изменения{% else %}Добавить{% endif %}
+        </button>
+        <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline">Отмена</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

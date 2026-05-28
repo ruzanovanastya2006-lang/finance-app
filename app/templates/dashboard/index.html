@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}Дашборд — {{ month_name }} {{ year }}{% endblock %}
+{% block content %}
+<div class="dashboard">
+
+  <!-- Шапка: переключатель месяца -->
+  <div class="dash-header">
+    <div class="month-nav">
+      <a href="{{ url_for('dashboard.index', year=prev_year, month=prev_month) }}" class="month-arrow">&#8592;</a>
+      <div class="month-select-wrap">
+        <span class="month-label">{{ month_name }} {{ year }}</span>
+        <select id="monthQuickSelect" onchange="gotoMonth(this.value)">
+          {% for y in range(today.year - 2, today.year + 1) %}
+            {% for m in range(1, 13) %}
+              {% set mn = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'][m-1] %}
+              <option value="{{ y }}-{{ m }}" {% if y == year and m == month %}selected{% endif %}>{{ mn }} {{ y }}</option>
+            {% endfor %}
+          {% endfor %}
+        </select>
+      </div>
+      <a href="{{ url_for('dashboard.index', year=next_year, month=next_month) }}" class="month-arrow">&#8594;</a>
+    </div>
+    <a href="{{ url_for('operations.add') }}" class="btn btn-primary">+ Добавить операцию</a>
+  </div>
+
+  <!-- Карточки итогов -->
+  <div class="summary-cards">
+    <div class="summary-card income">
+      <div class="card-label">Доходы</div>
+      <div class="card-value">{{ '%.0f'|format(analytics.income) }} ₽</div>
+    </div>
+    <div class="summary-card expense">
+      <div class="card-label">Расходы</div>
+      <div class="card-value">{{ '%.0f'|format(analytics.expense) }} ₽</div>
+      {% if analytics.expense_diff_pct is not none %}
+        <div class="card-diff {% if analytics.expense_diff_pct > 0 %}diff-up{% else %}diff-down{% endif %}">
+          {% if analytics.expense_diff_pct > 0 %}▲{% else %}▼{% endif %}
+          {{ analytics.expense_diff_pct|abs }}% к прошлому месяцу
+        </div>
+      {% endif %}
+    </div>
+    <div class="summary-card balance {% if analytics.balance >= 0 %}pos{% else %}neg{% endif %}">
+      <div class="card-label">Баланс</div>
+      <div class="card-value">{{ '%.0f'|format(analytics.balance) }} ₽</div>
+    </div>
+  </div>
+
+  <div class="dash-columns">
+    <!-- Левая колонка: графики -->
+    <div class="dash-left">
+      <div class="chart-card">
+        <h3>Структура расходов</h3>
+        {% if analytics.pie_values %}
+          <canvas id="pieChart" height="260"></canvas>
+        {% else %}
+          <p class="no-data">Нет расходов за этот период</p>
+        {% endif %}
+      </div>
+      <div class="chart-card">
+        <h3>Динамика трат по дням</h3>
+        {% if analytics.daily_values %}
+          <canvas id="lineChart" height="200"></canvas>
+        {% else %}
+          <p class="no-data">Нет данных за этот период</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Правая колонка: лимиты -->
+    <div class="dash-right">
+      <div class="limits-card">
+        <h3>Бюджет по категориям</h3>
+        {% for c in analytics.cat_stats %}
+          {% if c.spent > 0 or c.limit > 0 %}
+          <div class="limit-row">
+            <div class="limit-name">{{ c.icon }} {{ c.name }}</div>
+            <div class="limit-amounts">
+              {{ '%.0f'|format(c.spent) }} ₽
+              {% if c.limit > 0 %} / {{ '%.0f'|format(c.limit) }} ₽{% endif %}
+            </div>
+            {% if c.limit > 0 and c.pct is not none %}
+              <div class="progress-bar-wrap">
+                <div class="progress-bar
+                  {% if c.pct >= 100 %}bar-red
+                  {% elif c.pct >= 90 %}bar-orange
+                  {% elif c.pct >= 80 %}bar-yellow
+                  {% else %}bar-green{% endif %}"
+                  style="width: {{ [c.pct, 100]|min }}%"></div>
+              </div>
+              <div class="limit-pct
+                {% if c.pct >= 100 %}pct-red
+                {% elif c.pct >= 90 %}pct-orange
+                {% elif c.pct >= 80 %}pct-yellow
+                {% else %}pct-green{% endif %}">
+                {{ '%.0f'|format(c.pct) }}%
+              </div>
+            {% endif %}
+          </div>
+          {% endif %}
+        {% endfor %}
+        <a href="{{ url_for('categories.index') }}" class="btn-link">Управление категориями →</a>
+      </div>
+
+      <!-- Уведомления -->
+      {% if notifications %}
+      <div class="notif-card">
+        <h3>🔔 Уведомления</h3>
+        {% for n in notifications %}
+          <div class="notif-item
+            {% if n.threshold == 100 %}notif-red
+            {% elif n.threshold == 90 %}notif-orange
+            {% else %}notif-yellow{% endif %}">
+            {{ n.message }}
+          </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Таблица операций -->
+  <div class="transactions-section">
+    <div class="tx-header">
+      <h3>Операции</h3>
+      <!-- Фильтры -->
+      <form method="GET" class="filters-form" id="filtersForm">
+        <input type="hidden" name="year" value="{{ year }}">
+        <input type="hidden" name="month" value="{{ month }}">
+        <input type="date" name="date_from" value="{{ date_from }}">
+        <input type="date" name="date_to" value="{{ date_to }}">
+        <select name="type">
+          <option value="" {% if not filter_type %}selected{% endif %}>Все типы</option>
+          <option value="income" {% if filter_type == 'income' %}selected{% endif %}>Доходы</option>
+          <option value="expense" {% if filter_type == 'expense' %}selected{% endif %}>Расходы</option>
+        </select>
+        <select name="cat">
+          <option value="">Все категории</option>
+          {% for c in user_cats %}
+            <option value="{{ c.id }}" {% if filter_cat == c.id %}selected{% endif %}>{{ c.icon }} {{ c.name }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-sm">Применить</button>
+        <a href="{{ url_for('dashboard.index', year=year, month=month) }}" class="btn btn-sm btn-outline">Сбросить</a>
+      </form>
+    </div>
+
+    {% if transactions %}
+    <div class="tx-table-wrap">
+      <table class="tx-table">
+        <thead>
+          <tr>
+            <th>Дата</th>
+            <th>Тип</th>
+            <th>Категория</th>
+            <th>Сумма</th>
+            <th>Комментарий</th>
+            <th>Действия</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for tx in transactions %}
+          <tr class="{% if tx.type == 'income' %}tx-income{% else %}tx-expense{% endif %}">
+            <td>{{ tx.date.strftime('%d.%m.%Y') }}</td>
+            <td>{% if tx.type == 'income' %}↑ Доход{% else %}↓ Расход{% endif %}</td>
+            <td>{{ tx.category.icon if tx.category else '' }} {{ tx.category.name if tx.category else '—' }}</td>
+            <td class="tx-amount">{% if tx.type == 'income' %}+{% else %}−{% endif %}{{ '%.2f'|format(tx.amount|float) }} ₽</td>
+            <td class="tx-comment">{{ tx.comment or '—' }}</td>
+            <td class="tx-actions">
+              <a href="{{ url_for('operations.edit', tx_id=tx.id) }}" class="btn-icon" title="Редактировать">✏️</a>
+              <form method="POST" action="{{ url_for('operations.delete', tx_id=tx.id) }}" style="display:inline"
+                    onsubmit="return confirm('Удалить операцию?')">
+                <button type="submit" class="btn-icon" title="Удалить">🗑️</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p class="no-data">Нет операций за выбранный период.</p>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+const pieLabels = {{ analytics.pie_labels | tojson }};
+const pieValues = {{ analytics.pie_values | tojson }};
+const pieColors = {{ analytics.pie_colors | tojson }};
+const dailyLabels = {{ analytics.daily_labels | tojson }};
+const dailyValues = {{ analytics.daily_values | tojson }};
+
+function gotoMonth(val) {
+  const [y, m] = val.split('-');
+  window.location.href = `/?year=${y}&month=${m}`;
+}
+</script>
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+{% endblock %}

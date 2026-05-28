@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Финансовый дашборд{% endblock %}
+{% block content %}
+<div class="landing">
+  <div class="landing-hero">
+    <h1>💰 Финансовый дашборд</h1>
+    <p>Контролируй расходы, следи за лимитами и анализируй свой бюджет.</p>
+    <div class="landing-btns">
+      <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Зарегистрироваться</a>
+      <a href="{{ url_for('auth.login') }}" class="btn btn-outline">Войти</a>
+    </div>
+  </div>
+  <div class="landing-features">
+    <div class="feature-card">
+      <span class="feature-icon">📊</span>
+      <h3>Аналитика</h3>
+      <p>Круговые диаграммы и графики трат по дням</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🔔</span>
+      <h3>Уведомления</h3>
+      <p>Предупреждения при достижении 80%, 90% и 100% лимита</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">📄</span>
+      <h3>Отчёты</h3>
+      <p>Экспорт в CSV и PDF с отправкой на email</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

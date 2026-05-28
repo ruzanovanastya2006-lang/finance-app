@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Категории{% endblock %}
+{% block content %}
+<div class="form-page">
+  <h2>📂 Категории</h2>
+
+  <!-- Форма добавления новой категории -->
+  <div class="form-card">
+    <h3>Добавить категорию</h3>
+    <form method="POST" action="{{ url_for('categories.add') }}" class="inline-form">
+      <input type="text" name="name" required placeholder="Название" maxlength="100">
+      <input type="number" name="monthly_limit" min="0" step="0.01" placeholder="Лимит ₽ (необяз.)">
+      <input type="text" name="icon" placeholder="Иконка 📦" maxlength="5" value="📦">
+      <input type="color" name="color" value="#9E9E9E" title="Цвет">
+      <button type="submit" class="btn btn-primary">Создать</button>
+    </form>
+  </div>
+
+  <!-- Стандартные категории -->
+  <div class="form-card">
+    <h3>Стандартные категории</h3>
+    <table class="cat-table">
+      <thead>
+        <tr><th>Категория</th><th>Лимит</th><th>Видимость</th></tr>
+      </thead>
+      <tbody>
+        {% for c in default_cats %}
+        <tr {% if c.id in hidden_ids %}class="cat-hidden"{% endif %}>
+          <td><span style="color:{{ c.color }}">{{ c.icon }}</span> {{ c.name }}</td>
+          <td>
+            <form method="POST" action="{{ url_for('categories.set_limit') }}" style="display:none" id="limitForm{{ c.id }}">
+              <input type="number" name="limit" step="0.01" min="0" value="{{ c.monthly_limit or 0 }}">
+            </form>
+            <span class="limit-val" onclick="editLimit({{ c.id }})">
+              {% if c.monthly_limit and c.monthly_limit > 0 %}{{ '%.0f'|format(c.monthly_limit|float) }} ₽{% else %}—{% endif %}
+            </span>
+          </td>
+          <td>
+            <form method="POST" action="{{ url_for('categories.toggle_hide', cat_id=c.id) }}" style="display:inline">
+              <button type="submit" class="btn-icon" title="{% if c.id in hidden_ids %}Показать{% else %}Скрыть{% endif %}">
+                {% if c.id in hidden_ids %}👁️‍🗨️{% else %}👁️{% endif %}
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Пользовательские категории -->
+  {% if user_cats %}
+  <div class="form-card">
+    <h3>Мои категории</h3>
+    <table class="cat-table">
+      <thead>
+        <tr><th>Категория</th><th>Лимит</th><th>Действия</th></tr>
+      </thead>
+      <tbody>
+        {% for c in user_cats %}
+        <tr>
+          <td><span style="color:{{ c.color }}">{{ c.icon }}</span> {{ c.name }}</td>
+          <td>{{ '%.0f'|format(c.monthly_limit|float) if c.monthly_limit else '—' }} {% if c.monthly_limit %}₽{% endif %}</td>
+          <td>
+            <button class="btn-icon" onclick="openEditModal({{ c.id }}, '{{ c.name }}', {{ c.monthly_limit or 0 }}, '{{ c.color }}', '{{ c.icon }}')" title="Редактировать">✏️</button>
+            <form method="POST" action="{{ url_for('categories.delete', cat_id=c.id) }}" style="display:inline"
+                  onsubmit="return confirm('Удалить категорию? Операции перейдут в «Прочее».')">
+              <button type="submit" class="btn-icon" title="Удалить">🗑️</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Модальное окно редактирования -->
+<div class="modal-overlay" id="editModal" style="display:none">
+  <div class="modal-card">
+    <h3>Редактировать категорию</h3>
+    <form method="POST" id="editCatForm">
+      <div class="form-group">
+        <label>Название</label>
+        <input type="text" name="name" id="editName" required maxlength="100">
+      </div>
+      <div class="form-group">
+        <label>Месячный лимит, ₽</label>
+        <input type="number" name="monthly_limit" id="editLimit" min="0" step="0.01">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Иконка</label>
+          <input type="text" name="icon" id="editIcon" maxlength="5">
+        </div>
+        <div class="form-group">
+          <label>Цвет</label>
+          <input type="color" name="color" id="editColor">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+        <button type="button" class="btn btn-outline" onclick="closeEditModal()">Отмена</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openEditModal(id, name, limit, color, icon) {
+  document.getElementById('editName').value = name;
+  document.getElementById('editLimit').value = limit;
+  document.getElementById('editColor').value = color;
+  document.getElementById('editIcon').value = icon;
+  document.getElementById('editCatForm').action = `/categories/${id}/edit`;
+  document.getElementById('editModal').style.display = 'flex';
+}
+function closeEditModal() {
+  document.getElementById('editModal').style.display = 'none';
+}
+function editLimit(id) {
+  const newVal = prompt('Введите лимит для категории (₽):');
+  if (newVal === null) return;
+  const val = parseFloat(newVal);
+  if (isNaN(val) || val < 0) { alert('Некорректное значение'); return; }
+  fetch('/categories/set-limit', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({cat_id: id, limit: val})
+  }).then(() => location.reload());
+}
+</script>
+{% endblock %}
