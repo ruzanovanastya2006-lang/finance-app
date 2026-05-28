@@ -6,40 +6,35 @@
 
 ---
 
-Проект реализовывался через последовательные промты. Модель создавала модули один за другим: config.py, run.py, models.py, auth, notifications, dashboard, operations, categories, reports, шаблоны и статику.
+Проект реализовывался через последовательные промты. Модель создавала модули один за другим: config.py, run.py, requirements.txt, models.py, auth, notifications, dashboard, operations, categories, reports, шаблоны и статику. При первом запуске был обнаружен и сразу исправлен конфликт маршрутов.
 
-- ![Реализация модулей проекта](docs/screenshots/02.png)
-
----
-
-При первом запуске обнаружен баг: главная страница `/` возвращала редирект на форму входа. Причина — Blueprint дашборда занимал маршрут `/`. Исправление: добавлен `url_prefix='/dashboard'`.
-
-- ![Обнаружение и исправление конфликта маршрутов](docs/screenshots/03.png)
+- ![Реализация config.py, run.py, requirements.txt](docs/screenshots/02.png)
+- ![Реализация models.py, auth, notifications, dashboard, operations](docs/screenshots/03.png)
+- ![Запуск приложения, обнаружение и исправление конфликта маршрутов](docs/screenshots/04.png)
 
 ---
 
 При тестировании генерации PDF весь русский текст отображался чёрными квадратами (■■■■). Причина — шрифт Helvetica не поддерживает кириллицу. Исправление: подключён системный шрифт Windows Arial.
 
-- ![Обнаружение и исправление бага с кириллицей в PDF](docs/screenshots/04.png)
+- ![Обнаружение и исправление бага с кириллицей в PDF](docs/screenshots/05.png)
 
 ---
 
-По ТЗ требуется отправка email-уведомлений и отчётов. Реализована отправка через Gmail SMTP. При первом тесте провайдер заблокировал SMTP-порты (587 и 465).
+По ТЗ требуется отправка email-отчётов. После нескольких неудачных попыток через SMTP (порты 587 и 465 заблокированы провайдером) принято решение перейти на HTTP API сервиса Brevo. После перехода возникла ошибка прокси — VPN-клиент sing-box перехватывал запросы.
 
-- ![Ошибка getaddrinfo failed — SMTP заблокирован](docs/screenshots/05.png)
-- ![Ошибка WRONG_VERSION_NUMBER — порт 465 тоже не работает](docs/screenshots/06.png)
-
----
-
-Принято решение перейти на HTTP API сервиса Brevo (порт 443). После регистрации в Brevo и получения API-ключа модель переписала email_service.py с smtplib на requests. После перехода возникла ошибка прокси — VPN-клиент sing-box перехватывал запросы.
-
-- ![Переход на Brevo API, ошибка ProxyError sing-box](docs/screenshots/07.png)
+- ![Переход на Brevo API, ошибка ProxyError](docs/screenshots/06.png)
 
 ---
 
-При следующем запросе Brevo вернул ошибку об отсутствии email отправителя. Потребовалась верификация sender в панели Brevo и захардкоживание email в коде.
+Brevo вернул ошибку об отсутствии email отправителя. Потребовалась верификация sender в панели Brevo.
 
-- ![Ошибка sender email is missing, верификация в Brevo и финальное исправление](docs/screenshots/08.png)
+- ![Ошибка sender email is missing, верификация в Brevo](docs/screenshots/07.png)
+
+---
+
+После верификации потребовалось дополнительное исправление — захардкоживание email отправителя в коде.
+
+- ![Финальное исправление email отправителя](docs/screenshots/08.png)
 
 ---
 
